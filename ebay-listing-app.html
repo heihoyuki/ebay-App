@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>eBay 出品アシスタント</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{font-family:-apple-system,BlinkMacSystemFont,'Hiragino Sans','Noto Sans JP',sans-serif;background:#0f0f0f;color:#f0f0f0;min-height:100vh;}
+.app{max-width:680px;margin:0 auto;padding:16px 14px 100px;}
+.header{margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid #2e2e2e;}
+.header h1{font-size:18px;font-weight:700;}
+.header h1 span{color:#60d4f0;}
+.header p{font-size:12px;color:#888;margin-top:4px;}
+.steps{display:flex;margin-bottom:24px;}
+.stab{flex:1;padding:10px 4px;text-align:center;font-size:11px;color:#555;border-bottom:2px solid #2e2e2e;cursor:pointer;user-select:none;}
+.stab.active{color:#60d4f0;border-color:#60d4f0;font-weight:500;}
+.stab.done{color:#888;border-color:#555;}
+.screen{display:none;}
+.screen.active{display:block;}
+.fs{margin-bottom:20px;}
+.fs>label{display:block;font-size:12px;color:#888;margin-bottom:8px;font-weight:500;letter-spacing:.04em;}
+.req{color:#60d4f0;}
+input[type=text],input[type=number],textarea,select{width:100%;background:#1a1a1a;border:1px solid #2e2e2e;border-radius:8px;color:#f0f0f0;font-family:inherit;font-size:14px;padding:12px 14px;outline:none;transition:border-color .2s;-webkit-appearance:none;appearance:none;}
+input[type=text]:focus,input[type=number]:focus,textarea:focus,select:focus{border-color:#60d4f0;}
+textarea{resize:vertical;line-height:1.6;}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;}
+.upbox{border:1.5px dashed #2e2e2e;border-radius:12px;padding:28px 16px;text-align:center;cursor:pointer;transition:all .2s;background:#1a1a1a;}
+.upbox:hover{border-color:#60d4f0;background:rgba(96,212,240,.04);}
+.upbox .icon{font-size:28px;margin-bottom:10px;}
+.upbox h3{font-size:14px;font-weight:500;margin-bottom:6px;}
+.upbox p{font-size:12px;color:#888;line-height:1.7;}
+.pcount{font-size:12px;color:#60d4f0;margin-top:8px;display:none;}
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px;margin-top:12px;}
+.pitem{aspect-ratio:1;border-radius:8px;overflow:hidden;position:relative;background:#242424;}
+.pitem img{width:100%;height:100%;object-fit:cover;}
+.pdel{position:absolute;top:4px;right:4px;width:22px;height:22px;background:rgba(0,0,0,.75);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;cursor:pointer;color:#fff;border:none;}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:14px 20px;border-radius:8px;font-family:inherit;font-size:14px;font-weight:500;cursor:pointer;transition:all .15s;border:none;touch-action:manipulation;}
+.btn-p{background:#60d4f0;color:#0f0f0f;width:100%;}
+.btn-p:hover{background:#78ddf5;}
+.btn-p:active{transform:scale(.98);}
+.btn-s{background:#242424;color:#f0f0f0;border:1px solid #2e2e2e;width:100%;}
+.btn-sm{padding:8px 14px;font-size:12px;}
+.gen{text-align:center;padding:60px 20px;}
+.spin{width:40px;height:40px;border:2px solid #2e2e2e;border-top-color:#60d4f0;border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 20px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.rblock{background:#1a1a1a;border:1px solid #2e2e2e;border-radius:12px;overflow:hidden;margin-bottom:14px;}
+.rheader{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #2e2e2e;font-size:12px;color:#888;font-weight:500;}
+.rbody{padding:14px;}
+.rbody textarea,.rbody input[type=text]{background:transparent;border:none;padding:0;font-size:13px;line-height:1.8;}
+.rbody textarea:focus,.rbody input[type=text]:focus{border:none;}
+.notice{background:rgba(96,212,240,.06);border:1px solid rgba(96,212,240,.2);border-radius:8px;padding:12px 16px;font-size:12px;color:#888;margin-bottom:18px;line-height:1.7;}
+.actrow{display:flex;gap:10px;margin-top:20px;}
+.actrow .btn{flex:1;}
+.ccount{font-size:11px;color:#555;text-align:right;margin-top:4px;font-family:monospace;}
+.ccount.warn{color:#f0a060;}
+.ccount.over{color:#f06060;}
+.ust{font-size:12px;margin-top:8px;padding:8px 12px;border-radius:6px;display:none;}
+.ust.ok{background:rgba(96,212,240,.1);color:#60d4f0;display:block;}
+.ust.err{background:rgba(240,96,96,.1);color:#f06060;display:block;white-space:pre-wrap;}
+.chip{display:inline-flex;gap:6px;align-items:center;padding:6px 12px;border-radius:99px;border:1px solid #2e2e2e;font-size:12px;cursor:pointer;color:#888;background:#1a1a1a;user-select:none;}
+.chip input{width:auto;margin:0;}
+.hint{font-size:11px;color:#555;margin-top:6px;line-height:1.6;}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <h1>eBay <span>出品アシスタント</span></h1>
+    <p>写真をアップして、AIが英語の出品文を自動生成します（eBay Australia / Trading API）</p>
+  </div>
+
+  <div class="steps">
+    <div class="stab active" id="tab1" onclick="tabGo(1)">① 写真・情報</div>
+    <div class="stab" id="tab2" onclick="tabGo(2)">② 生成確認</div>
+    <div class="stab" id="tab3" onclick="tabGo(3)">③ 出品</div>
+  </div>
+
+  <!-- ① 写真・情報 -->
+  <div class="screen active" id="s1">
+    <div class="fs">
+      <label>商品写真</label>
+      <div class="upbox" onclick="document.getElementById('fileInput').click()">
+        <div class="icon">📷</div>
+        <h3>タップして写真を選択</h3>
+        <p>複数枚選択可。imgBB APIキーを入力すると自動でURL化されます</p>
+      </div>
+      <input type="file" id="fileInput" accept="image/*" multiple style="display:none">
+      <div class="pcount" id="pcount"></div>
+      <div class="pgrid" id="pgrid"></div>
+    </div>
+
+    <div class="fs">
+      <label>商品名・メモ（日本語でOK・AIが英訳します）<span class="req">*</span></label>
+      <textarea id="itemMemo" rows="3" placeholder="例：USED 任天堂 Switch 本体 動作確認済み 箱・付属品あり"></textarea>
+    </div>
+
+    <div class="row2 fs">
+      <div>
+        <label>コンディション<span class="req">*</span></label>
+        <select id="conditionId">
+          <option value="1000">New（新品）</option>
+          <option value="1500">New other</option>
+          <option value="3000" selected>Used（中古）</option>
+          <option value="7000">For parts / not working</option>
+        </select>
+      </div>
+      <div>
+        <label>販売価格（AUD）<span class="req">*</span></label>
+        <input type="number" id="price" placeholder="例：45.00" step="0.01">
+      </div>
+    </div>
+
+    <div class="row2 fs">
+      <div>
+        <label>eBayカテゴリID<span class="req">*</span></label>
+        <input type="text" id="categoryId" placeholder="例：139973">
+        <div class="hint">eBayの<a href="https://www.ebay.com.au/sch/allcategories/all-categories" target="_blank" style="color:#60d4f0;">カテゴリ一覧</a>や出品画面で確認したIDを入力</div>
+      </div>
+      <div>
+        <label>個数</label>
+        <input type="number" id="quantity" value="1" min="1">
+      </div>
+    </div>
+
+    <div class="fs">
+      <label>郵便番号（発送元・任意）</label>
+      <input type="text" id="postalCode" placeholder="例：2000">
+    </div>
+
+    <div class="row2 fs">
+      <div>
+        <label>配送方法</label>
+        <select id="shippingService">
+          <option value="AU_StandardDelivery">Standard Delivery</option>
+          <option value="AU_ExpressPost">Express Post</option>
+          <option value="AU_Parcel Post">Parcel Post</option>
+        </select>
+      </div>
+      <div>
+        <label>配送料（AUD）</label>
+        <input type="number" id="shippingCost" value="0" step="0.01">
+      </div>
+    </div>
+
+    <div class="fs">
+      <label class="chip" style="width:fit-content;">
+        <input type="checkbox" id="returnsAccepted" checked> 返品を受け付ける
+      </label>
+    </div>
+
+    <div class="fs">
+      <label>Claude APIキー<span class="req">*</span></label>
+      <input type="text" id="apiKey" placeholder="sk-ant-...">
+      <div class="hint">ブラウザ内のみ使用・外部送信なし・次回自動入力</div>
+    </div>
+
+    <div class="fs">
+      <label>imgBB APIキー（画像の自動アップロード用・無料）</label>
+      <input type="text" id="imgbbKey" placeholder="api.imgbb.com で無料取得">
+    </div>
+
+    <button class="btn btn-p" onclick="startGen()">✨ AIで出品文を生成する</button>
+  </div>
+
+  <!-- 生成中 -->
+  <div class="screen" id="s2">
+    <div class="gen">
+      <div class="spin" id="genSpin"></div>
+      <p id="genMsg">商品情報を分析中...</p>
+      <p id="genErr" style="display:none;color:#f06060;font-size:12px;margin-top:10px;"></p>
+    </div>
+  </div>
+
+  <!-- ② 生成確認 -->
+  <div class="screen" id="s3">
+    <div class="notice">AIが生成した英語タイトル・説明文です。送信前に確認・編集してください。</div>
+
+    <div class="rblock">
+      <div class="rheader">Title（80字以内）</div>
+      <div class="rbody">
+        <input type="text" id="rtitle" maxlength="80" oninput="updateTitleCount()">
+        <div class="ccount" id="titleCount">0 / 80</div>
+      </div>
+    </div>
+
+    <div class="rblock">
+      <div class="rheader">Description</div>
+      <div class="rbody">
+        <textarea id="rdesc" rows="8"></textarea>
+      </div>
+    </div>
+
+    <div class="actrow">
+      <button class="btn btn-s" onclick="showScr('s1')">← 戻る</button>
+      <button class="btn btn-p" onclick="showScr('s4')">次へ →</button>
+    </div>
+  </div>
+
+  <!-- ③ 出品 -->
+  <div class="screen" id="s4">
+    <div class="fs">
+      <label>eBay User Token（Auth'n'Auth）<span class="req">*</span></label>
+      <input type="text" id="ebayToken" placeholder="developer.ebay.com の User Tokens で発行したトークン">
+      <div class="hint">developer.ebay.com → Application → User Tokens から取得。次回自動入力</div>
+    </div>
+
+    <div class="fs">
+      <label>Worker エンドポイント URL<span class="req">*</span></label>
+      <input type="text" id="workerUrl" placeholder="https://xxxx.workers.dev">
+    </div>
+
+    <div class="fs">
+      <label class="chip" style="width:fit-content;">
+        <input type="checkbox" id="sandboxMode" checked> Sandboxへ送信（テスト環境）
+      </label>
+      <div class="hint">チェックを外すとProduction（本番）のeBayへ出品されます</div>
+    </div>
+
+    <button class="btn btn-p" onclick="submitEbay()">🚀 eBayへ出品する</button>
+
+    <div class="ust" id="submitStatus"></div>
+  </div>
+</div>
+
+<script>
+let imgs=[];
+
+document.addEventListener('DOMContentLoaded',()=>{
+  ['apiKey','imgbbKey','ebayToken','workerUrl'].forEach(id=>{
+    const saved=localStorage.getItem('ebay_'+id);
+    if(saved) document.getElementById(id).value=saved;
+    document.getElementById(id).addEventListener('change',e=>localStorage.setItem('ebay_'+id,e.target.value));
+  });
+  document.getElementById('fileInput').addEventListener('change',e=>{addImgs(e.target.files);e.target.value='';});
+});
+
+function tabGo(n){
+  if(n===1) showScr('s1');
+  if(n===2&&genDone) showScr('s3');
+  if(n===3&&genDone) showScr('s4');
+}
+function showScr(id){
+  ['s1','s2','s3','s4'].forEach(s=>document.getElementById(s).classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  const map={s1:1,s2:1,s3:2,s4:3};
+  const cur=map[id];
+  ['tab1','tab2','tab3'].forEach((t,i)=>{
+    const el=document.getElementById(t);
+    el.classList.remove('active','done');
+    if(i+1<cur)el.classList.add('done');
+    if(i+1===cur)el.classList.add('active');
+  });
+  window.scrollTo(0,0);
+}
+
+// ===== 写真アップロード（imgBB自動URL化） =====
+function addImgs(files){
+  const ibKey=document.getElementById('imgbbKey').value.trim();
+  Array.from(files).forEach(f=>{
+    if(!f.type.startsWith('image/')) return;
+    const r=new FileReader();
+    r.onload=async e=>{
+      const dataUrl=e.target.result;
+      const idx=imgs.length;
+      imgs.push({dataUrl,url:null,uploading:!!ibKey});
+      renderPreviews();
+      if(ibKey){
+        try{
+          const fd=new FormData();
+          fd.append('key',ibKey);
+          fd.append('image',dataUrl.split(',')[1]);
+          const res=await fetch('https://api.imgbb.com/1/upload',{method:'POST',body:fd});
+          const d=await res.json();
+          if(d.success){ imgs[idx].url=d.data.url; imgs[idx].uploading=false; }
+          else{ imgs[idx].uploading=false; imgs[idx].error=true; }
+        }catch{ imgs[idx].uploading=false; imgs[idx].error=true; }
+        renderPreviews();
+      }
+    };
+    r.readAsDataURL(f);
+  });
+}
+function renderPreviews(){
+  const g=document.getElementById('pgrid'), c=document.getElementById('pcount');
+  g.innerHTML=imgs.map((img,i)=>`
+    <div class="pitem">
+      <img src="${img.dataUrl}">
+      <button class="pdel" onclick="delImg(${i})">×</button>
+      ${img.uploading?'<div style="position:absolute;bottom:4px;left:4px;right:4px;background:rgba(0,0,0,.7);color:#60d4f0;font-size:10px;text-align:center;border-radius:4px;padding:2px;">アップ中...</div>':''}
+      ${img.url?'<div style="position:absolute;bottom:4px;left:4px;right:4px;background:rgba(0,0,0,.7);color:#60d4f0;font-size:10px;text-align:center;border-radius:4px;padding:2px;">✅ URL取得済み</div>':''}
+      ${img.error?'<div style="position:absolute;bottom:4px;left:4px;right:4px;background:rgba(240,96,96,.8);color:#fff;font-size:10px;text-align:center;border-radius:4px;padding:2px;">⚠️ 失敗</div>':''}
+    </div>`).join('');
+  c.style.display=imgs.length?'block':'none';
+  const done=imgs.filter(i=>i.url).length;
+  const uploading=imgs.filter(i=>i.uploading).length;
+  if(uploading>0) c.textContent=`⏳ ${uploading}枚アップロード中... （${done}/${imgs.length}完了）`;
+  else if(done>0) c.textContent=`✅ ${done}枚のURLを自動取得しました`;
+  else c.textContent=`📷 ${imgs.length}枚選択済み（imgBB APIキー未設定のためURL未取得）`;
+}
+function delImg(i){ imgs.splice(i,1); renderPreviews(); }
+
+// ===== ② AI生成（Claude API・英語で出力） =====
+let genDone=false;
+async function startGen(){
+  const key=document.getElementById('apiKey').value.trim();
+  const memo=document.getElementById('itemMemo').value.trim();
+  const price=document.getElementById('price').value.trim();
+  const condition=document.getElementById('conditionId').selectedOptions[0].text;
+  if(!memo){alert('商品名・メモを入力してください');return;}
+  if(!price){alert('販売価格を入力してください');return;}
+  if(!key){alert('Claude APIキーを入力してください');return;}
+
+  showScr('s2');
+  try{
+    const prompt=`You are writing an eBay Australia listing. Based on the following Japanese notes about an item, write an ENGLISH eBay title and description.
+
+Item notes (Japanese): ${memo}
+Condition: ${condition}
+Price: AUD ${price}
+
+Rules:
+- Title must be 80 characters or fewer, in English, no emoji, include brand/model if mentioned in the notes.
+- Description should be 100-300 words, in English, clear and honest about condition, suitable for an Australian buyer.
+- Do not invent specifications that are not in the notes.
+
+Return ONLY JSON, no surrounding text:
+{"title":"...","description":"..."}`;
+
+    const ctrl=new AbortController();
+    const tid=setTimeout(()=>ctrl.abort(),45000);
+    let res;
+    try{
+      res=await fetch('https://api.anthropic.com/v1/messages',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+        body:JSON.stringify({model:'claude-haiku-4-5-20251001',max_tokens:800,messages:[{role:'user',content:prompt}]}),
+        signal:ctrl.signal
+      });
+    }finally{clearTimeout(tid);}
+    const data=await res.json();
+    if(data.error) throw new Error(data.error.message);
+    const txt=data.content[0].text;
+    const parsed=JSON.parse(txt.replace(/```json|```/g,'').trim());
+    document.getElementById('rtitle').value=(parsed.title||'').slice(0,80);
+    document.getElementById('rdesc').value=parsed.description||'';
+    updateTitleCount();
+    genDone=true;
+    showScr('s3');
+  }catch(e){
+    const msg=e.name==='AbortError'?'タイムアウト。もう一度お試しください。':e.message;
+    const errEl=document.getElementById('genErr');
+    errEl.textContent='⚠️ '+msg;
+    errEl.style.display='block';
+    document.getElementById('genSpin').style.display='none';
+    document.getElementById('genMsg').textContent='エラーが発生しました';
+    setTimeout(()=>{
+      errEl.style.display='none';
+      document.getElementById('genSpin').style.display='';
+      document.getElementById('genMsg').textContent='商品情報を分析中...';
+      showScr('s1');
+    },3000);
+  }
+}
+function updateTitleCount(){
+  const len=document.getElementById('rtitle').value.length;
+  const el=document.getElementById('titleCount');
+  el.textContent=`${len} / 80`;
+  el.className='ccount'+(len>80?' over':len>70?' warn':'');
+}
+
+// ===== ③ eBayへ出品（Workerへリレー） =====
+async function submitEbay(){
+  const token=document.getElementById('ebayToken').value.trim();
+  const workerUrl=document.getElementById('workerUrl').value.trim();
+  const sandbox=document.getElementById('sandboxMode').checked;
+  if(!token){alert('eBay User Tokenを入力してください');return;}
+  if(!workerUrl){alert('Worker エンドポイント URLを入力してください');return;}
+
+  const pictureUrls=imgs.map(i=>i.url).filter(Boolean);
+  const item={
+    title: document.getElementById('rtitle').value.trim(),
+    description: document.getElementById('rdesc').value.trim(),
+    categoryId: document.getElementById('categoryId').value.trim(),
+    conditionId: Number(document.getElementById('conditionId').value),
+    price: parseFloat(document.getElementById('price').value)||0,
+    quantity: parseInt(document.getElementById('quantity').value)||1,
+    postalCode: document.getElementById('postalCode').value.trim(),
+    pictureUrls,
+    shipping:{
+      service: document.getElementById('shippingService').value,
+      cost: parseFloat(document.getElementById('shippingCost').value)||0,
+      dispatchTimeMax: 3
+    },
+    returnPolicy:{
+      returnsAccepted: document.getElementById('returnsAccepted').checked,
+      refund:'MoneyBack',
+      returnsWithin:'Days_30',
+      shippingCostPaidBy:'Buyer'
+    }
+  };
+
+  if(!item.title){alert('Titleが空です');return;}
+  if(!item.categoryId){alert('カテゴリIDを入力してください');return;}
+
+  const st=document.getElementById('submitStatus');
+  st.className='ust loading';
+  st.style.display='block';
+  st.textContent='⏳ eBayへ送信中...';
+
+  try{
+    const res=await fetch(workerUrl,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({token,sandbox,item})
+    });
+    const data=await res.json();
+    if(data.ok){
+      st.className='ust ok';
+      st.textContent=`✅ 出品成功！ItemID: ${data.itemId}\n${sandbox?'(Sandbox環境)':'(Production環境)'}`;
+    }else{
+      const errMsg=(data.errors||[]).map(e=>`[${e.code}] ${e.message}`).join('\n')||data.raw||'不明なエラー';
+      st.className='ust err';
+      st.textContent=`❌ 出品エラー:\n${errMsg}`;
+    }
+  }catch(e){
+    st.className='ust err';
+    st.textContent='通信エラー: '+e.message;
+  }
+}
+</script>
+</body>
+</html>
