@@ -96,13 +96,27 @@ textarea{resize:vertical;line-height:1.6;}
       <textarea id="itemMemo" rows="3" placeholder="例：USED 任天堂 Switch 本体 動作確認済み 箱・付属品あり"></textarea>
     </div>
 
+    <div class="fs">
+      <label>出品元<span class="req">*</span></label>
+      <div class="row2">
+        <label class="chip" style="width:auto;justify-content:center;">
+          <input type="radio" name="origin" id="originAu" value="au" checked onchange="updateOriginFields()"> 🇦🇺 豪州
+        </label>
+        <label class="chip" style="width:auto;justify-content:center;">
+          <input type="radio" name="origin" id="originJp" value="jp" onchange="updateOriginFields()"> 🇯🇵 日本（EMS発送）
+        </label>
+      </div>
+      <div class="hint">日本発送の場合、配送・返品はeBayに登録済みのポリシー（大阪発送・国際配送）が自動的に適用されます</div>
+    </div>
+
     <div class="row2 fs">
       <div>
         <label>コンディション<span class="req">*</span></label>
         <select id="conditionId">
+          <option value="" selected disabled>選択してください</option>
           <option value="1000">New（新品）</option>
           <option value="1500">New other</option>
-          <option value="3000" selected>Used（中古）</option>
+          <option value="3000">Used（中古）</option>
           <option value="7000">For parts / not working</option>
         </select>
       </div>
@@ -124,30 +138,32 @@ textarea{resize:vertical;line-height:1.6;}
       </div>
     </div>
 
-    <div class="fs">
-      <label>郵便番号（発送元・任意）</label>
-      <input type="text" id="postalCode" placeholder="例：2000">
-    </div>
-
-    <div class="row2 fs">
-      <div>
-        <label>配送方法</label>
-        <select id="shippingService">
-          <option value="AU_StandardDelivery">Standard Delivery</option>
-          <option value="AU_ExpressPost">Express Post</option>
-          <option value="AU_Parcel Post">Parcel Post</option>
-        </select>
+    <div id="auShippingFields">
+      <div class="fs">
+        <label>郵便番号（発送元・任意）</label>
+        <input type="text" id="postalCode" placeholder="例：2000">
       </div>
-      <div>
-        <label>配送料（AUD）</label>
-        <input type="number" id="shippingCost" value="0" step="0.01">
-      </div>
-    </div>
 
-    <div class="fs">
-      <label class="chip" style="width:fit-content;">
-        <input type="checkbox" id="returnsAccepted" checked> 返品を受け付ける
-      </label>
+      <div class="row2 fs">
+        <div>
+          <label>配送方法</label>
+          <select id="shippingService">
+            <option value="AU_StandardDelivery">Standard Delivery</option>
+            <option value="AU_ExpressPost">Express Post</option>
+            <option value="AU_Parcel Post">Parcel Post</option>
+          </select>
+        </div>
+        <div>
+          <label>配送料（AUD）</label>
+          <input type="number" id="shippingCost" value="0" step="0.01">
+        </div>
+      </div>
+
+      <div class="fs">
+        <label class="chip" style="width:fit-content;">
+          <input type="checkbox" id="returnsAccepted" checked> 返品を受け付ける
+        </label>
+      </div>
     </div>
 
     <div class="fs">
@@ -234,7 +250,15 @@ document.addEventListener('DOMContentLoaded',()=>{
     document.getElementById(id).addEventListener('change',e=>localStorage.setItem('ebay_'+id,e.target.value));
   });
   document.getElementById('fileInput').addEventListener('change',e=>{addImgs(e.target.files);e.target.value='';});
+  updateOriginFields();
 });
+
+function getOrigin(){
+  return document.getElementById('originJp').checked?'jp':'au';
+}
+function updateOriginFields(){
+  document.getElementById('auShippingFields').style.display=getOrigin()==='jp'?'none':'block';
+}
 
 function tabGo(n){
   if(n===1) showScr('s1');
@@ -307,13 +331,19 @@ async function startGen(){
   const key=document.getElementById('apiKey').value.trim();
   const memo=document.getElementById('itemMemo').value.trim();
   const price=document.getElementById('price').value.trim();
-  const condition=document.getElementById('conditionId').selectedOptions[0].text;
+  const conditionSel=document.getElementById('conditionId');
+  const condition=conditionSel.selectedOptions[0]?conditionSel.selectedOptions[0].text:'';
+  const origin=getOrigin();
   if(!memo){alert('商品名・メモを入力してください');return;}
+  if(!conditionSel.value){alert('商品の状態（コンディション）を選択してください');return;}
   if(!price){alert('販売価格を入力してください');return;}
   if(!key){alert('Claude APIキーを入力してください');return;}
 
   showScr('s2');
   try{
+    const originRule=origin==='jp'
+      ?'- This item ships from Japan via EMS (tracked international shipping). Mention in the description that it ships from Japan via tracked EMS, and that the buyer is responsible for any customs duties or import taxes.'
+      :'- This item ships from within Australia.';
     const prompt=`You are writing an eBay Australia listing. Based on the following Japanese notes about an item, write an ENGLISH eBay title and description.
 
 Item notes (Japanese): ${memo}
@@ -324,6 +354,7 @@ Rules:
 - Title must be 80 characters or fewer, in English, no emoji, include brand/model if mentioned in the notes.
 - Description should be 100-300 words, in English, clear and honest about condition, suitable for an Australian buyer.
 - Do not invent specifications that are not in the notes.
+${originRule}
 
 Return ONLY JSON, no surrounding text:
 {"title":"...","description":"..."}`;
@@ -379,6 +410,7 @@ async function submitEbay(){
   if(!workerUrl){alert('Worker エンドポイント URLを入力してください');return;}
 
   const pictureUrls=imgs.map(i=>i.url).filter(Boolean);
+  const origin=getOrigin();
   const item={
     title: document.getElementById('rtitle').value.trim(),
     description: document.getElementById('rdesc').value.trim(),
@@ -386,20 +418,25 @@ async function submitEbay(){
     conditionId: Number(document.getElementById('conditionId').value),
     price: parseFloat(document.getElementById('price').value)||0,
     quantity: parseInt(document.getElementById('quantity').value)||1,
-    postalCode: document.getElementById('postalCode').value.trim(),
     pictureUrls,
-    shipping:{
+    origin
+  };
+  if(origin==='jp'){
+    // 配送・返品は日本発送用のeBay Business Policy（SellerProfiles）がWorker側で自動適用される
+  }else{
+    item.postalCode = document.getElementById('postalCode').value.trim();
+    item.shipping = {
       service: document.getElementById('shippingService').value,
       cost: parseFloat(document.getElementById('shippingCost').value)||0,
       dispatchTimeMax: 3
-    },
-    returnPolicy:{
+    };
+    item.returnPolicy = {
       returnsAccepted: document.getElementById('returnsAccepted').checked,
       refund:'MoneyBack',
       returnsWithin:'Days_30',
       shippingCostPaidBy:'Buyer'
-    }
-  };
+    };
+  }
 
   if(!item.title){alert('Titleが空です');return;}
   if(!item.categoryId){alert('カテゴリIDを入力してください');return;}
